@@ -2,6 +2,7 @@
 .vscode/
 
 # compiled binary
-build/
+fib
 *.o
-*.lib
+*.bc
+*.ll
