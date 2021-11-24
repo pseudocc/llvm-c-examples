@@ -44,6 +44,7 @@ LLVMBuilderRef declare_fib(LLVMValueRef fib) {
   LLVMValueRef c1 = LLVMConstInt(LLVMInt32Type(), -1, 0);
   LLVMValueRef c2 = LLVMConstInt(LLVMInt32Type(), 3, 0);
   LLVMValueRef c3 = LLVMConstInt(LLVMInt32Type(), 2, 0);
+  LLVMValueRef n;
   
   LLVMBasicBlockRef entry = LLVMAppendBasicBlock(fib, "entry");
   LLVMBasicBlockRef err = LLVMAppendBasicBlock(fib, "err");
@@ -59,16 +60,15 @@ LLVMBuilderRef declare_fib(LLVMValueRef fib) {
   LLVMValueRef aptr = LLVMBuildAlloca(builder, LLVMInt32Type(), "aptr");
   LLVMValueRef bptr = LLVMBuildAlloca(builder, LLVMInt32Type(), "bptr");
   LLVMValueRef nptr = LLVMBuildAlloca(builder, LLVMInt32Type(), "nptr");
-  LLVMBuildStore(builder, LLVMGetParam(fib, 0), nptr);
-  LLVMValueRef n = LLVMBuildLoad(builder, nptr, "n");
-  LLVMValueRef is_nlt1 = LLVMBuildICmp(builder, LLVMIntSLT, n, c0, "n < 1");
+  LLVMBuildStore(builder, n = LLVMGetParam(fib, 0), nptr);
+  LLVMValueRef is_nlt1 = LLVMBuildICmp(builder, LLVMIntSLT, n, c0, "is_nlt1");
   LLVMBuildCondBr(builder, is_nlt1, err, noerr);
 
   LLVMPositionBuilderAtEnd(builder, err);
   LLVMBuildRet(builder, c1);
 
   LLVMPositionBuilderAtEnd(builder, noerr);
-  LLVMValueRef is_nlt3 = LLVMBuildICmp(builder, LLVMIntSLT, n, c2, "n < 3");
+  LLVMValueRef is_nlt3 = LLVMBuildICmp(builder, LLVMIntSLT, n, c2, "is_nlt3");
   LLVMBuildCondBr(builder, is_nlt3, lt3, body);
 
   LLVMPositionBuilderAtEnd(builder, lt3);
@@ -80,10 +80,11 @@ LLVMBuilderRef declare_fib(LLVMValueRef fib) {
   LLVMBuildBr(builder, loop_cond);
 
   LLVMPositionBuilderAtEnd(builder, loop_cond);
-  LLVMValueRef is_true = LLVMBuildICmp(builder, LLVMIntSGT, n, c3, "n-- > 2");
+  n = LLVMBuildLoad(builder, nptr, "n");
+  LLVMValueRef is_ngt2 = LLVMBuildICmp(builder, LLVMIntSGT, n, c3, "is_ngt2");
   LLVMValueRef n_minus = LLVMBuildSub(builder, n, c0, "n_minus");
   LLVMBuildStore(builder, n_minus, nptr);
-  LLVMBuildCondBr(builder, is_true, loop_body, end);
+  LLVMBuildCondBr(builder, is_ngt2, loop_body, end);
 
   LLVMPositionBuilderAtEnd(builder, loop_body);
   LLVMValueRef a = LLVMBuildLoad(builder, aptr, "a");
@@ -129,15 +130,15 @@ int main(int argc, const char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  // Write out bitcode to file
+  if (LLVMWriteBitcodeToFile(mod, "fib.bc") != 0)
+    fprintf(stderr, "error writing bitcode to file, skipping\n");
+
   int n = atoi(argv[1]);
 
   LLVMGenericValueRef args[] = { LLVMCreateGenericValueOfInt(LLVMInt32Type(), n, 0) };
   LLVMGenericValueRef anwser = LLVMRunFunction(engine, fib, 1, args);
   printf("%d\n", (int)LLVMGenericValueToInt(anwser, 0));
-
-  // Write out bitcode to file
-  if (LLVMWriteBitcodeToFile(mod, "fib.bc") != 0)
-    fprintf(stderr, "error writing bitcode to file, skipping\n");
 
   LLVMDisposeBuilder(builder);
   LLVMDisposeExecutionEngine(engine);
