@@ -1,7 +1,7 @@
 CC=clang-12
 CFLAGS=-g `llvm-config-12 --cflags`
-LD=clang++-12
-LDFLAGS=`llvm-config-12 --cxxflags --ldflags --libs core executionengine interpreter analysis native bitwriter --system-libs`
+LD=clang-12
+LDFLAGS=`llvm-config-12 --cflags --ldflags --libs core executionengine interpreter analysis native bitwriter --system-libs`
 
 .PHONY: all
 all: math fib fac
