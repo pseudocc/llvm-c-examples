@@ -3,6 +3,8 @@
 
 # compiled binary
 fib
+fac
+math
 *.o
 *.bc
 *.ll
