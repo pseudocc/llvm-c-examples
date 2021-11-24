@@ -65,7 +65,7 @@ static int run_itoi(const char* name, int argc, const char* argv[]) {
     exit(EXIT_FAILURE);
 
   n = atoi(argv[1]);
-  printf("fib(%d) = %d\n", n, call_func(name, n));
+  printf("%s(%d) = %d\n", name, n, call_func(name, n));
   driver_dispose();
 
   return 0;
