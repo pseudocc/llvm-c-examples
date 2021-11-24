@@ -52,8 +52,6 @@ static int call_func(const char* name, int n) {
   return (int)LLVMGenericValueToInt(answer, 1);
 }
 
-typedef int (*itoi_t)(int);
-
 static int run_itoi(const char* name, int argc, const char* argv[]) {
   int n;
   if (argc < 2) {
