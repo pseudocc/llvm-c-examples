@@ -2,6 +2,8 @@
 
 works well on ubuntu 20.04.
 
+repository that gives me great help [igor84/summus](https://github.com/igor84/summus)
+
 ## Installation
 
 LLVM and Clang.
