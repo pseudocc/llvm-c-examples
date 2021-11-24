@@ -1,12 +1,24 @@
-# include <llvm-c/Core.h>
 # include <llvm-c/ExecutionEngine.h>
 # include <llvm-c/Target.h>
 # include <llvm-c/Analysis.h>
 # include <llvm-c/BitWriter.h>
 
-# include <inttypes.h>
 # include <stdio.h>
 # include <stdlib.h>
+# include "./math.h"
+
+# ifndef MODULE_NAME
+# define MODULE_NAME "math"
+# endif
+
+static LLVMValueRef define_i32toi32(LLVMModuleRef mod, const char* name) {
+  LLVMTypeRef param_types[] = { LLVMInt32Type() };
+  // 1 => param_types.length
+  // 0 => not a variadic function
+  LLVMTypeRef return_type = LLVMFunctionType(LLVMInt32Type(), param_types, 1, 0);
+  LLVMValueRef func = LLVMAddFunction(mod, name, return_type);
+  return func;
+}
 
 /**
  * int fib(int n) {
@@ -26,20 +38,11 @@
  * }
  **/
 
-# ifndef MODULE_NAME
-# define MODULE_NAME "math"
-# endif
-
 LLVMValueRef define_fib(LLVMModuleRef mod) {
-  LLVMTypeRef param_types[] = { LLVMInt32Type() };
-  // 1 => param_types.length
-  // 0 => not a variadic function
-  LLVMTypeRef return_type = LLVMFunctionType(LLVMInt32Type(), param_types, 1, 0);
-  LLVMValueRef fib = LLVMAddFunction(mod, "fib", return_type);
-  return fib;
+  return define_i32toi32(mod, FIBONACCI);
 }
 
-LLVMBuilderRef declare_fib(LLVMValueRef fib) {
+void declare_fib(LLVMValueRef fib) {
   LLVMValueRef c0 = LLVMConstInt(LLVMInt32Type(), 1, 0);
   LLVMValueRef c1 = LLVMConstInt(LLVMInt32Type(), -1, 0);
   LLVMValueRef c2 = LLVMConstInt(LLVMInt32Type(), 3, 0);
@@ -98,50 +101,97 @@ LLVMBuilderRef declare_fib(LLVMValueRef fib) {
   LLVMValueRef anwser = LLVMBuildLoad(builder, bptr, "answer");
   LLVMBuildRet(builder, anwser);
 
-  return builder;
+  LLVMDisposeBuilder(builder);
+}
+
+/**
+ * int fac(int n) {
+ *   if (n < 0)
+ *     return -fac(-n);
+ *   switch (n) {
+ *   case 0:
+ *   case 1:
+ *     return 1;
+ *   default:
+ *     return n * fac(n - 1);
+ *   }
+ * }
+ **/
+LLVMValueRef define_fac(LLVMModuleRef mod) {
+  return define_i32toi32(mod, FACTORIAL);
+}
+
+void declare_fac(LLVMValueRef fac) {
+  LLVMValueRef c0 = LLVMConstInt(LLVMInt32Type(), 0, 0);
+  LLVMValueRef c1 = LLVMConstInt(LLVMInt32Type(), 1, 0);
+
+  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(fac, "entry");
+  LLVMBasicBlockRef neg = LLVMAppendBasicBlock(fac, "neg");
+  LLVMBasicBlockRef match = LLVMAppendBasicBlock(fac, "match");
+  LLVMBasicBlockRef is0 = LLVMAppendBasicBlock(fac, "is0");
+  LLVMBasicBlockRef is1 = LLVMAppendBasicBlock(fac, "is1");
+  LLVMBasicBlockRef gt1 = LLVMAppendBasicBlock(fac, "gt1");
+  LLVMBasicBlockRef end = LLVMAppendBasicBlock(fac, "end");
+  LLVMBuilderRef builder = LLVMCreateBuilder();
+
+  LLVMPositionBuilderAtEnd(builder, entry);
+  LLVMValueRef n = LLVMGetParam(fac, 0);
+  LLVMValueRef is_nlt0 = LLVMBuildICmp(builder, LLVMIntSLT, n, c0, "is_nlt0");
+  LLVMBuildCondBr(builder, is_nlt0, neg, match);
+
+  LLVMPositionBuilderAtEnd(builder, neg);
+  LLVMValueRef absn = LLVMBuildNeg(builder, n, "absn");
+  LLVMValueRef abs_fac_args[] = { absn };
+  LLVMValueRef abs_fac = LLVMBuildCall(builder, fac, abs_fac_args, 1, "abs_fac");
+  LLVMValueRef neg_fac = LLVMBuildNeg(builder, abs_fac, "neg_fac");
+  LLVMBuildBr(builder, end);
+
+  LLVMPositionBuilderAtEnd(builder, match);
+  LLVMValueRef switch_n = LLVMBuildSwitch(builder, n, gt1, 2);
+  LLVMAddCase(switch_n, c0, is0);
+  LLVMAddCase(switch_n, c1, is1);
+
+  LLVMPositionBuilderAtEnd(builder, is0);
+  LLVMBuildBr(builder, is1);
+
+  LLVMPositionBuilderAtEnd(builder, is1);
+  LLVMBuildBr(builder, end);
+
+  LLVMPositionBuilderAtEnd(builder, gt1);
+  LLVMValueRef n_minus = LLVMBuildSub(builder, n, c1, "n_minus");
+  LLVMValueRef rec_fac_args[] = { n_minus };
+  LLVMValueRef rec_fac = LLVMBuildCall(builder, fac, rec_fac_args, 1, "rec_fac");
+  LLVMValueRef prod = LLVMBuildMul(builder, n, rec_fac, "prod");
+  LLVMBuildBr(builder, end);
+
+  LLVMPositionBuilderAtEnd(builder, end);
+  LLVMValueRef answer = LLVMBuildPhi(builder, LLVMInt32Type(), "answer");
+  LLVMValueRef phi_vals[] = { neg_fac, c1, prod };
+  LLVMBasicBlockRef phi_blocks[] = { neg, is1, gt1 };
+  LLVMAddIncoming(answer, phi_vals, phi_blocks, 3);
+  LLVMBuildRet(builder, answer);
+
+  LLVMDisposeBuilder(builder);
 }
 
 int main(int argc, const char* argv[]) {
   LLVMModuleRef mod;
-  LLVMValueRef fib;
-  LLVMExecutionEngineRef engine;
-  LLVMBuilderRef builder;
+  LLVMValueRef fib, fac;
   char* error = NULL;
   
   mod = LLVMModuleCreateWithName(MODULE_NAME);
   fib = define_fib(mod);
-  builder = declare_fib(fib);
+  fac = define_fac(mod);
+  declare_fib(fib);
+  declare_fac(fac);
 
   LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
   LLVMDisposeMessage(error);
 
-  error = NULL;
-  if (LLVMCreateExecutionEngineForModule(&engine, mod, &error) != 0) {
-    fprintf(stderr, "failed to create execution engine with error: \n%s\n", error);
-    abort();
-  }
-  if (error) {
-    LLVMDisposeMessage(error);
-    exit(EXIT_FAILURE);
-  }
+  if (LLVMWriteBitcodeToFile(mod, "math.bc") != 0)
+    fprintf(stderr, "error writing bitcode to file.\n");
 
-  if (argc < 2) {
-    fprintf(stderr, "usage: %s n\n", argv[0]);
-    exit(EXIT_FAILURE);
-  }
-
-  // Write out bitcode to file
-  if (LLVMWriteBitcodeToFile(mod, "fib.bc") != 0)
-    fprintf(stderr, "error writing bitcode to file, skipping\n");
-
-  int n = atoi(argv[1]);
-
-  LLVMGenericValueRef args[] = { LLVMCreateGenericValueOfInt(LLVMInt32Type(), n, 0) };
-  LLVMGenericValueRef anwser = LLVMRunFunction(engine, fib, 1, args);
-  printf("%d\n", (int)LLVMGenericValueToInt(anwser, 0));
-
-  LLVMDisposeBuilder(builder);
-  LLVMDisposeExecutionEngine(engine);
+  LLVMDisposeModule(mod);
   
   return 0;
 }
