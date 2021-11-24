@@ -1,0 +1,7 @@
+# vscode configurations
+.vscode/
+
+# compiled binary
+build/
+*.o
+*.lib
