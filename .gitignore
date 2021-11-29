@@ -5,6 +5,8 @@
 fib
 fac
 math
+main
 *.o
 *.bc
 *.ll
+*.s

@@ -33,6 +33,18 @@ math.bc: math
 math.ll: math.bc
 	llvm-dis-12 $<
 
+libmath.o: math.bc
+	llc-12 $< -o libmath.o -filetype=obj
+
+libmath.s: math.bc
+	llc-12 $< -o libmath.o
+
+main.o: main.c
+	$(CC) $(CFLAGS) -c $<
+
+main: main.o libmath.o
+	$(LD) $(LDFLAGS) $^ -o $@
+
 .PHONY: clean
 clean:
 	rm -f math math.bc math.ll
