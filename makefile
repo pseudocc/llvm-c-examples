@@ -4,7 +4,7 @@ LD=clang-12
 LDFLAGS=`llvm-config-12 --cflags --ldflags --libs core executionengine interpreter analysis native bitwriter --system-libs`
 
 .PHONY: all
-all: math fib fac
+all: math fib fac main
 
 math.o: math.c
 	$(CC) $(CFLAGS) -c $<
