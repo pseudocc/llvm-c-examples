@@ -1,4 +1,4 @@
-# LLVM-C EXAMPLE
+# LLVM-C EXAMPLES
 
 works well on ubuntu 20.04.
 
