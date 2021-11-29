@@ -37,6 +37,13 @@ Run fib.
 # fib(13) = 233
 ```
 
+## Run compiled main
+
+```bash
+./main fib 10
+# 55
+```
+
 ## LLVM IR Text Format
 
 ```bash
